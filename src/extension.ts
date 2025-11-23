@@ -9,38 +9,31 @@ export function activate(context: vscode.ExtensionContext) {
             const selection = editor.selection;
             const document = editor.document;
             let content = '';
-            let startingLine = 0;
             if (!selection.isEmpty) {
                 content = document.getText(selection);
-                startingLine = selection.start.line;
             } else {
                 content = document.getText();
-                startingLine = 0;
             }
 
             if (content) {
-                try {
-                    const config = vscode.workspace.getConfiguration('discord-share');
-                    const promptForComment = config.get<boolean>('promptForComment');
-                    let comment: string | undefined;
-                    if (promptForComment) {
-                        comment = await vscode.window.showInputBox({
-                            prompt: "Enter a comment to include with your code",
-                            placeHolder: "e.g. Needs review"
-                        });
-                        // If the user cancels the input box, stop the process
-                        if (comment === undefined) {
-                            return;
-                        }
-                    }
+                const choice = await vscode.window.showQuickPick(['Embed', 'Plain Message'], {
+                    placeHolder: 'How would you like to share your code?'
+                });
 
-                    await share(content, document.fileName, startingLine, comment);
-                    vscode.window.showInformationMessage(`Successfully shared to Discord.`);
-                } catch (error) {
-                    if (error instanceof Error) {
-                        vscode.window.showErrorMessage(`Failed to share to Discord: ${error.message}`);
-                    } else {
-                        vscode.window.showErrorMessage(`Failed to share to Discord: ${String(error)}`);
+                if (choice) {
+                    try {
+                        if (choice === 'Embed') {
+                            await shareAsEmbed(content, document.fileName, context);
+                        } else {
+                            await shareAsPlainMessage(content, document.fileName, context);
+                        }
+                        vscode.window.showInformationMessage(`Successfully shared to Discord as a ${choice.toLowerCase()}.`);
+                    } catch (error) {
+                        if (error instanceof Error) {
+                            vscode.window.showErrorMessage(`Failed to share to Discord: ${error.message}`);
+                        } else {
+                            vscode.window.showErrorMessage(`Failed to share to Discord: ${String(error)}`);
+                        }
                     }
                 }
             } else {
@@ -54,7 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(shareCommand);
 }
 
-async function share(content: string, fileName: string, startingLine: number, comment?: string) {
+async function shareAsEmbed(content: string, fileName: string, context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('discord-share');
     const webhookUrl = config.get<string>('webhookUrl');
 
@@ -62,31 +55,15 @@ async function share(content: string, fileName: string, startingLine: number, co
         throw new Error('Discord webhook URL not configured. Please set it in the settings.');
     }
 
-    const showAuthor = config.get<boolean>('showAuthor');
-    let authorName = config.get<string>('authorName');
-    if (showAuthor && !authorName) {
-        authorName = process.env.USERNAME || process.env.USER || 'Anonymous';
-    }
-
-    const showLineNumbers = config.get<boolean>('showLineNumbers');
-    if (showLineNumbers) {
-        const lines = content.split('\n');
-        const numberedLines = lines.map((line, index) => `${String(startingLine + index + 1).padStart(4, ' ')} | ${line}`);
-        content = numberedLines.join('\n');
-    }
-
     const extension = vscode.extensions.getExtension('icodis.discord-share');
-    const extensionVersion = extension ? extension.packageJSON.version : '1.0.0';
+    const extensionVersion = extension ? extension.packageJSON.version : '1.0';
     const extensionName = extension ? extension.packageJSON.displayName : 'Discord Share';
 
     const ext = path.extname(fileName).substring(1);
-    const language = getLanguageName(ext);
-
     const codeBlockHeader = '```' + ext + '\n';
     const codeBlockFooter = '\n```';
     const MAX_DESCRIPTION_LENGTH = 4096;
-    const fileNameLine = `**File:** \`${path.basename(fileName)}\`\n`;
-    const MAX_CONTENT_LENGTH = MAX_DESCRIPTION_LENGTH - codeBlockHeader.length - codeBlockFooter.length - fileNameLine.length;
+    const MAX_CONTENT_LENGTH = MAX_DESCRIPTION_LENGTH - codeBlockHeader.length - codeBlockFooter.length;
 
     const contentChunks = [];
     for (let i = 0; i < content.length; i += MAX_CONTENT_LENGTH) {
@@ -97,170 +74,110 @@ async function share(content: string, fileName: string, startingLine: number, co
         const chunk = contentChunks[i];
         const codeBlock = codeBlockHeader + chunk + codeBlockFooter;
 
-        const embed: any = {
-            title: language ? `${language} Code` : 'Code Snippet',
-            description: fileNameLine + codeBlock,
+        const embed = {
+            title: `File: ${path.basename(fileName)}` + (contentChunks.length > 1 ? ` (Part ${i + 1}/${contentChunks.length})` : ''),
+            description: codeBlock,
             color: 0x0099ff,
-            timestamp: new Date().toISOString(),
             footer: {
                 icon_url: "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png",
-                text: `${extensionName} v${extensionVersion} | Developed by Harshhhh1`
+                text: `${extensionName} v${extensionVersion}| Developed by Harshhhh1 `
             }
         };
-
-        if (showAuthor) {
-            embed.author = { name: authorName };
-        }
-
-        if (i === 0 && comment) {
-             embed.fields = [{ name: 'Comment', value: comment }];
-        }
-        
-        if (contentChunks.length > 1) {
-            embed.title += ` (Part ${i + 1}/${contentChunks.length})`;
-        }
-
         await sendEmbed(webhookUrl, embed);
     }
 }
 
-function getLanguageName(extension: string): string {
+async function shareAsPlainMessage(content: string, fileName: string, context: vscode.ExtensionContext) {
+    const config = vscode.workspace.getConfiguration('discord-share');
+    const webhookUrl = config.get<string>('webhookUrl');
 
-    const languageMap: { [key: string]: string } = {
+    if (!webhookUrl) {
+        throw new Error('Discord webhook URL not configured. Please set it in the settings.');
+    }
 
-        'py': 'Python',
+    const ext = path.extname(fileName).substring(1);
+    const codeBlockHeader = '```' + ext + '\n';
+    const codeBlockFooter = '\n```';
+    const MAX_LENGTH = 2000;
+    const MAX_CONTENT_LENGTH = MAX_LENGTH - codeBlockHeader.length - codeBlockFooter.length;
 
-        'js': 'JavaScript',
+    const contentChunks = [];
+    for (let i = 0; i < content.length; i += MAX_CONTENT_LENGTH) {
+        contentChunks.push(content.substring(i, i + MAX_CONTENT_LENGTH));
+    }
 
-        'ts': 'TypeScript',
-
-        'java': 'Java',
-
-        'c': 'C',
-
-        'cpp': 'C++',
-
-        'cs': 'C#',
-
-        'go': 'Go',
-
-        'php': 'PHP',
-
-        'rb': 'Ruby',
-
-        'rs': 'Rust',
-
-        'swift': 'Swift',
-
-        'kt': 'Kotlin',
-
-        'html': 'HTML',
-
-        'css': 'CSS',
-
-        'scss': 'SCSS',
-
-        'less': 'Less',
-
-        'json': 'JSON',
-
-        'xml': 'XML',
-
-        'yml': 'YAML',
-
-        'md': 'Markdown',
-
-        'sh': 'Shell',
-
-        'bat': 'Batch',
-
-        'sql': 'SQL',
-
-        'pl': 'Perl',
-
-        'lua': 'Lua',
-
-        'r': 'R',
-
-        'dart': 'Dart',
-
-        'dockerfile': 'Dockerfile'
-
-    };
-
-    return languageMap[extension.toLowerCase()] || extension.toUpperCase();
-
+    for (const chunk of contentChunks) {
+        await sendPlainMessage(webhookUrl, codeBlockHeader + chunk + codeBlockFooter);
+    }
 }
-
-
 
 function sendEmbed(webhookUrl: string, embed: any): Promise<void> {
-
     return new Promise((resolve, reject) => {
-
         const data = JSON.stringify({ embeds: [embed] });
-
         const url = new URL(webhookUrl);
-
         const options = {
-
             hostname: url.hostname,
-
             path: url.pathname,
-
             method: 'POST',
-
             headers: {
-
                 'Content-Type': 'application/json',
-
                 'Content-Length': data.length
-
             }
-
         };
 
-
-
         const req = https.request(options, res => {
-
             if (res.statusCode === 204) {
-
                 resolve();
-
             } else {
-
                 res.on('data', (d) => {
-
                     console.error(d.toString());
-
                 });
-
                 reject(new Error(`Status code: ${res.statusCode}`));
-
             }
-
         });
-
-
 
         req.on('error', error => {
-
             reject(error);
-
         });
 
-
-
         req.write(data);
-
         req.end();
-
     });
-
 }
 
+function sendPlainMessage(webhookUrl: string, message: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const data = JSON.stringify({ content: message });
+        const url = new URL(webhookUrl);
+        const options = {
+            hostname: url.hostname,
+            path: url.pathname,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': data.length
+            }
+        };
 
+        const req = https.request(options, res => {
+            if (res.statusCode === 204) {
+                resolve();
+            } else {
+                res.on('data', (d) => {
+                    console.error(d.toString());
+                });
+                reject(new Error(`Status code: ${res.statusCode}`));
+            }
+        });
+
+        req.on('error', error => {
+            reject(error);
+        });
+
+        req.write(data);
+        req.end();
+    });
+}
 
 export function deactivate() {}
 

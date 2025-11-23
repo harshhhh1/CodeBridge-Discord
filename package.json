@@ -1,20 +1,11 @@
 {
-  "name": "codecast-to-discord",
-  "displayName": "CodeCast to Discord",
-  "description": "Share files and code snippets from VS Code directly to Discord with syntax highlighting.",
-  "version": "0.0.1",
-  "publisher": "CodeCast",
+  "name": "discord-share",
+  "displayName": "Discord Share",
+  "description": "Share files and code snippets to Discord.",
+  "version": "1.0",
   "engines": {
     "vscode": "^1.106.1"
   },
-  "keywords": [
-    "discord",
-    "share",
-    "code",
-    "snippet",
-    "webhook",
-    "codecast"
-  ],
   "categories": [
     "Other"
   ],
@@ -26,7 +17,7 @@
     "commands": [
       {
         "command": "discord-share.share",
-        "title": "Send to Discord"
+        "title": "Share Code to Discord"
       }
     ],
     "menus": {
@@ -44,28 +35,7 @@
         "discord-share.webhookUrl": {
           "type": "string",
           "default": "",
-          "description": "The Discord webhook URL to post to. Can be set per workspace.",
-          "scope": "resource"
-        },
-        "discord-share.showAuthor": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show the author in the embed."
-        },
-        "discord-share.authorName": {
-          "type": "string",
-          "default": "",
-          "description": "The name to show as the author. If empty, the extension will try to use a name from the environment."
-        },
-        "discord-share.showLineNumbers": {
-          "type": "boolean",
-          "default": false,
-          "description": "Show line numbers in the code block."
-        },
-        "discord-share.promptForComment": {
-          "type": "boolean",
-          "default": false,
-          "description": "Prompt for a comment before sending."
+          "description": "The Discord webhook URL to post to."
         }
       }
     }
