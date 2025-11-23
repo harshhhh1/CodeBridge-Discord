@@ -3,35 +3,32 @@ import * as https from 'https';
 import * as path from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
-    const shareFileCommand = vscode.commands.registerCommand('discord-share.shareFile', () => {
-        const editor = vscode.window.activeTextEditor;
-        if (editor) {
-            const document = editor.document;
-            shareContent(document.getText(), document.fileName);
-        } else {
-            vscode.window.showInformationMessage('No active editor found.');
-        }
-    });
-
-    const shareSelectionCommand = vscode.commands.registerCommand('discord-share.shareSelection', () => {
+    const shareCommand = vscode.commands.registerCommand('discord-share.share', () => {
         const editor = vscode.window.activeTextEditor;
         if (editor) {
             const selection = editor.selection;
-            const text = editor.document.getText(selection);
-            if (text) {
-                shareContent(text, editor.document.fileName);
+            const document = editor.document;
+            let content = '';
+            if (!selection.isEmpty) {
+                content = document.getText(selection);
             } else {
-                vscode.window.showInformationMessage('No text selected.');
+                content = document.getText();
+            }
+
+            if (content) {
+                shareAsEmbed(content, document.fileName, context);
+            } else {
+                vscode.window.showInformationMessage('No content to share.');
             }
         } else {
             vscode.window.showInformationMessage('No active editor found.');
         }
     });
 
-    context.subscriptions.push(shareFileCommand, shareSelectionCommand);
+    context.subscriptions.push(shareCommand);
 }
 
-function shareContent(content: string, fileName: string) {
+function shareAsEmbed(content: string, fileName: string, context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('discord-share');
     const webhookUrl = config.get<string>('webhookUrl');
 
@@ -40,12 +37,23 @@ function shareContent(content: string, fileName: string) {
         return;
     }
 
-    const extension = path.extname(fileName).substring(1);
-    const codeBlock = '```' + extension + '\n' + content + '\n```';
+    const extension = vscode.extensions.getExtension('discord-share');
+    const extensionVersion = extension ? extension.packageJSON.version : 'N/A';
+    const extensionName = extension ? extension.packageJSON.displayName : 'Discord Share';
 
-    const data = JSON.stringify({
-        content: `File: ${path.basename(fileName)}\n${codeBlock}`
-    });
+    const ext = path.extname(fileName).substring(1);
+    const codeBlock = '```' + ext + '\n' + content + '\n```';
+
+    const embed = {
+        title: `File: ${path.basename(fileName)}`,
+        description: codeBlock,
+        color: 0x0099ff,
+        footer: {
+            text: `${extensionName} v${extensionVersion}`
+        }
+    };
+
+    const data = JSON.stringify({ embeds: [embed] });
 
     const url = new URL(webhookUrl);
 
@@ -61,7 +69,7 @@ function shareContent(content: string, fileName: string) {
 
     const req = https.request(options, res => {
         if (res.statusCode === 204) {
-            vscode.window.showInformationMessage('Successfully shared to Discord.');
+            vscode.window.showInformationMessage('Successfully shared to Discord as an embed.');
         } else {
             vscode.window.showErrorMessage(`Failed to share to Discord. Status code: ${res.statusCode}`);
         }
@@ -76,3 +84,4 @@ function shareContent(content: string, fileName: string) {
 }
 
 export function deactivate() {}
+

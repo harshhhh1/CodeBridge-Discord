@@ -10,21 +10,24 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:discord-share.shareFile",
-    "onCommand:discord-share.shareSelection"
+    "onCommand:discord-share.share"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "discord-share.shareFile",
-        "title": "Share File to Discord"
-      },
-      {
-        "command": "discord-share.shareSelection",
-        "title": "Share Selection to Discord"
+        "command": "discord-share.share",
+        "title": "Share Code to Discord"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "discord-share.share",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "type": "object",
       "title": "Discord Share",
