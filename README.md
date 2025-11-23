@@ -1,71 +1,47 @@
-# discord-share README
+# CodeCast to Discord
 
-This is the README for your extension "discord-share". After writing up a brief description, we recommend including the following sections.
+Share files and code snippets from VS Code directly to Discord with syntax highlighting.
+
+![CodeCast to Discord in action](https://raw.githubusercontent.com/username/repo/main/images/screenshot.png) <!-- Replace with actual screenshot -->
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+*   **Share Code with Context:** Send entire files or just selected code snippets to Discord.
+*   **Smart Splitting:** Automatically splits large code blocks into multiple messages to fit Discord's limits.
+*   **Syntax Highlighting:** Automatic language detection for beautiful syntax highlighting.
+*   **Author Attribution:** Optionally show who sent the code.
+*   **Timestamps:** Embeds include a timestamp.
+*   **Line Numbers:** Option to include line numbers in the code.
+*   **Workspace Webhooks:** Configure different webhooks for different projects.
+*   **Add Comments:** Include a comment with your code.
+*   **Simple Context Menu:** A single "Send to Discord" command in the context menu.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+You will need a Discord webhook URL to use this extension. You can get one by going to `Server Settings > Integrations > Webhooks > New Webhook`.
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
 This extension contributes the following settings:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+*   `discord-share.webhookUrl`: The Discord webhook URL to post to. This can be set per workspace.
+*   `discord-share.showAuthor`: (Default: `true`) Show the author in the embed.
+*   `discord-share.authorName`: The name to show as the author. If empty, the extension will try to use a name from the environment.
+*   `discord-share.showLineNumbers`: (Default: `false`) Show line numbers in the code block.
+*   `discord-share.promptForComment`: (Default: `false`) Prompt for a comment before sending.
 
-## Known Issues
+## How to Configure
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+1.  Install the "CodeCast to Discord" extension.
+2.  Open your VS Code settings (`Ctrl+,`).
+3.  Search for "discord-share".
+4.  Enter your Discord webhook URL in the `Discord-share: Webhook Url` setting.
+5.  (Optional) You can also configure a different webhook for each of your workspaces in the "Workspace" tab of your settings.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
 ### 1.0.0
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+Initial release of CodeCast to Discord.
 
 **Enjoy!**
