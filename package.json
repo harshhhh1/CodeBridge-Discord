@@ -2,9 +2,9 @@
   "name": "discord-share",
   "displayName": "Discord Share",
   "description": "Share files and code snippets to Discord.",
-  "version": "1.0",
+  "version": "1.0.0",
   "engines": {
-    "vscode": "^1.106.1"
+    "vscode": "^1.78.0"
   },
   "categories": [
     "Other"
