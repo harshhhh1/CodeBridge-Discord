@@ -2,8 +2,6 @@
 
 Share files and code snippets from VS Code directly to Discord with syntax highlighting.
 
-![CodeCast to Discord in action](https://raw.githubusercontent.com/username/repo/main/images/screenshot.png) <!-- Replace with actual screenshot -->
-
 ## Features
 
 *   **Share Code with Context:** Send entire files or just selected code snippets to Discord.
