@@ -55,9 +55,9 @@ async function shareAsEmbed(content: string, fileName: string, context: vscode.E
         throw new Error('Discord webhook URL not configured. Please set it in the settings.');
     }
 
-    const extension = vscode.extensions.getExtension('icodis.discord-share');
-    const extensionVersion = extension ? extension.packageJSON.version : '1.0';
-    const extensionName = extension ? extension.packageJSON.displayName : 'Discord Share';
+    const extension = context.extension;
+    const extensionVersion = extension.packageJSON.version || '1.0.0';
+    const extensionName = extension.packageJSON.displayName || 'Discord Share';
 
     const ext = path.extname(fileName).substring(1);
     const codeBlockHeader = '```' + ext + '\n';
@@ -83,7 +83,7 @@ async function shareAsEmbed(content: string, fileName: string, context: vscode.E
                 text: `${extensionName} v${extensionVersion}| Developed by Harshhhh1 `
             }
         };
-        await sendEmbed(webhookUrl, embed);
+        await sendDiscordPayload(webhookUrl, { embeds: [embed] });
     }
 }
 
@@ -107,13 +107,13 @@ async function shareAsPlainMessage(content: string, fileName: string, context: v
     }
 
     for (const chunk of contentChunks) {
-        await sendPlainMessage(webhookUrl, codeBlockHeader + chunk + codeBlockFooter);
+        await sendDiscordPayload(webhookUrl, { content: codeBlockHeader + chunk + codeBlockFooter });
     }
 }
 
-function sendEmbed(webhookUrl: string, embed: any): Promise<void> {
+function sendDiscordPayload(webhookUrl: string, payload: any): Promise<void> {
     return new Promise((resolve, reject) => {
-        const data = JSON.stringify({ embeds: [embed] });
+        const data = JSON.stringify(payload);
         const url = new URL(webhookUrl);
         const options = {
             hostname: url.hostname,
@@ -121,7 +121,7 @@ function sendEmbed(webhookUrl: string, embed: any): Promise<void> {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Content-Length': data.length
+                'Content-Length': Buffer.byteLength(data)
             }
         };
 
@@ -129,44 +129,13 @@ function sendEmbed(webhookUrl: string, embed: any): Promise<void> {
             if (res.statusCode === 204) {
                 resolve();
             } else {
-                res.on('data', (d) => {
-                    console.error(d.toString());
+                let responseBody = '';
+                res.on('data', (chunk) => {
+                    responseBody += chunk.toString();
                 });
-                reject(new Error(`Status code: ${res.statusCode}`));
-            }
-        });
-
-        req.on('error', error => {
-            reject(error);
-        });
-
-        req.write(data);
-        req.end();
-    });
-}
-
-function sendPlainMessage(webhookUrl: string, message: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const data = JSON.stringify({ content: message });
-        const url = new URL(webhookUrl);
-        const options = {
-            hostname: url.hostname,
-            path: url.pathname,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': data.length
-            }
-        };
-
-        const req = https.request(options, res => {
-            if (res.statusCode === 204) {
-                resolve();
-            } else {
-                res.on('data', (d) => {
-                    console.error(d.toString());
+                res.on('end', () => {
+                    reject(new Error(`Status code: ${res.statusCode}, Response: ${responseBody}`));
                 });
-                reject(new Error(`Status code: ${res.statusCode}`));
             }
         });
 
@@ -180,4 +149,3 @@ function sendPlainMessage(webhookUrl: string, message: string): Promise<void> {
 }
 
 export function deactivate() {}
-
